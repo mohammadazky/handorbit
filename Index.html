@@ -1,157 +1,196 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Saturn Motion</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>HANDORBIT — Saturn</title>
 
 <style>
-:root{
-  --space:#05010d;
-  --purple:#7b61ff;
-  --blue:#5ad7ff;
-}
-
-body{
+html,body{
   margin:0;
-  height:100vh;
-  background:radial-gradient(circle at top, #1d1b3a, var(--space));
+  padding:0;
+  background:black;
   overflow:hidden;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:white;
-  font-family:system-ui, sans-serif;
+  touch-action:none;
 }
+canvas{display:block}
 
-/* ===== NAME TEXT ===== */
-#name{
+/* TEXT */
+#title{
   position:absolute;
-  top:15%;
-  font-size:28px;
-  font-weight:600;
-  background:linear-gradient(90deg, var(--purple), var(--blue));
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
-  transition:transform .15s ease-out;
-  text-shadow:0 0 30px rgba(123,97,255,.5);
-}
-
-/* ===== SATURN ===== */
-.saturn{
-  position:relative;
-  width:180px;
-  height:180px;
-}
-
-.planet{
-  width:100%;
-  height:100%;
-  border-radius:50%;
-  background:radial-gradient(circle at 30% 30%, #cbbcff, #6a5cff 45%, #2a246e 75%);
-  box-shadow:
-    inset -15px -20px 40px rgba(0,0,0,.4),
-    0 0 70px rgba(123,97,255,.6);
-  animation:float 4s ease-in-out infinite;
-}
-
-.ring{
-  position:absolute;
-  top:50%;
+  top:70%;
   left:50%;
-  width:260px;
-  height:80px;
-  border:4px solid rgba(190,170,255,.6);
-  border-left:none;
-  border-right:none;
-  border-radius:50%;
-  transform:translate(-50%,-50%) rotateX(65deg);
-  animation:spin 7s linear infinite;
+  transform:translate(-50%,-50%);
+  font-family:'Segoe Script','Dancing Script',cursive;
+  font-size:2.6rem;
+  color:#ffe7c2;
+  white-space:nowrap;
+  pointer-events:none;
+  text-shadow:
+    0 0 18px rgba(255,180,80,.6),
+    0 0 35px rgba(255,80,40,.35);
+  transition:transform .1s linear;
 }
 
-/* ===== PARTICLES ===== */
-.particle{
-  position:absolute;
-  width:6px;
-  height:6px;
-  background:var(--blue);
-  border-radius:50%;
-  opacity:.8;
-  animation:drift 5s linear infinite;
+#cursor{
+  display:inline-block;
+  margin-left:4px;
+  animation:blink 1s infinite;
 }
-.p1{top:-20px; left:40px}
-.p2{top:50px; right:-20px; animation-delay:1s}
-.p3{bottom:-20px; left:80px; animation-delay:2s}
-.p4{bottom:40px; right:10px; animation-delay:3s}
 
-/* ===== TAP INFO ===== */
-#tap{
+@keyframes blink{
+  0%,50%,100%{opacity:1}
+  25%,75%{opacity:0}
+}
+
+#hint{
   position:absolute;
-  bottom:20px;
+  bottom:12px;
+  width:100%;
+  text-align:center;
   font-size:12px;
-  opacity:.6;
-}
-
-/* ===== ANIMATIONS ===== */
-@keyframes float{
-  0%,100%{transform:translateY(0)}
-  50%{transform:translateY(-12px)}
-}
-@keyframes spin{
-  from{transform:translate(-50%,-50%) rotateX(65deg) rotate(0deg)}
-  to{transform:translate(-50%,-50%) rotateX(65deg) rotate(360deg)}
-}
-@keyframes drift{
-  from{transform:translateY(0); opacity:.8}
-  to{transform:translateY(-40px); opacity:0}
+  color:rgba(255,255,255,.5);
+  font-family:sans-serif;
 }
 </style>
 </head>
 
 <body>
 
-<div id="name">Hi Mohammad Azky Kameel</div>
+<div id="title"><span id="text"></span><span id="cursor">|</span></div>
+<div id="hint">Gerakkan HP • Tap layar</div>
 
-<div class="saturn">
-  <div class="ring"></div>
-  <div class="planet"></div>
-  <div class="particle p1"></div>
-  <div class="particle p2"></div>
-  <div class="particle p3"></div>
-  <div class="particle p4"></div>
-</div>
-
-<div id="tap">Tap layar untuk aktifkan sensor</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 
 <script>
-const nameText = document.getElementById("name");
-const tap = document.getElementById("tap");
+/* SCENE */
+const scene = new THREE.Scene();
 
-function enableMotion(){
-  if (
-    typeof DeviceOrientationEvent !== "undefined" &&
-    typeof DeviceOrientationEvent.requestPermission === "function"
-  ){
-    DeviceOrientationEvent.requestPermission().then(res=>{
-      if(res === "granted"){
-        window.addEventListener("deviceorientation", handleMotion);
-        tap.innerText = "Gerakkan HP ✨";
-      }
-    });
-  } else {
-    window.addEventListener("deviceorientation", handleMotion);
-    tap.innerText = "Gerakkan HP ✨";
+/* CAMERA */
+const camera = new THREE.PerspectiveCamera(65, innerWidth/innerHeight, 0.1, 2000);
+camera.position.z = 8;
+
+/* RENDERER */
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+
+/* LIGHT */
+scene.add(new THREE.AmbientLight(0xffccaa,0.4));
+const sun = new THREE.DirectionalLight(0xffffff,2.5);
+sun.position.set(10,6,8);
+scene.add(sun);
+
+/* STARS */
+const starsGeo = new THREE.BufferGeometry();
+const starPos=[];
+for(let i=0;i<2200;i++){
+  starPos.push(
+    (Math.random()-0.5)*2000,
+    (Math.random()-0.5)*2000,
+    (Math.random()-0.5)*2000
+  );
+}
+starsGeo.setAttribute('position',new THREE.Float32BufferAttribute(starPos,3));
+const stars=new THREE.Points(
+  starsGeo,
+  new THREE.PointsMaterial({color:0xffffff,size:1})
+);
+scene.add(stars);
+
+/* SATURN */
+const planet=new THREE.Mesh(
+  new THREE.SphereGeometry(2.4,64,64),
+  new THREE.MeshStandardMaterial({
+    color:0xb84b2a,
+    roughness:0.45,
+    metalness:0.1
+  })
+);
+scene.add(planet);
+
+/* RING */
+const ring=new THREE.Mesh(
+  new THREE.RingGeometry(3.1,4.6,128),
+  new THREE.MeshStandardMaterial({
+    color:0xd8c6a1,
+    side:THREE.DoubleSide,
+    transparent:true,
+    opacity:0.85
+  })
+);
+ring.rotation.x=Math.PI/2.3;
+scene.add(ring);
+
+/* DUST */
+const dustGeo=new THREE.BufferGeometry();
+const dustPos=[];
+for(let i=0;i<1400;i++){
+  dustPos.push(
+    (Math.random()-0.5)*25,
+    (Math.random()-0.5)*25,
+    (Math.random()-0.5)*25
+  );
+}
+dustGeo.setAttribute('position',new THREE.Float32BufferAttribute(dustPos,3));
+const dust=new THREE.Points(
+  dustGeo,
+  new THREE.PointsMaterial({
+    color:0xffaa66,
+    size:0.05,
+    transparent:true,
+    opacity:0.7
+  })
+);
+scene.add(dust);
+
+/* SENSOR */
+let tiltX=0, tiltY=0;
+addEventListener('deviceorientation',e=>{
+  tiltX=e.gamma/40;
+  tiltY=e.beta/40;
+});
+
+/* TEXT MOVE */
+const title=document.getElementById("title");
+
+/* ANIMATE */
+function animate(){
+  requestAnimationFrame(animate);
+
+  planet.rotation.y+=0.002;
+  ring.rotation.z+=0.001;
+  dust.rotation.y+=0.0008;
+  stars.rotation.y+=0.00025;
+
+  planet.rotation.x=tiltY*0.25;
+  ring.rotation.x=Math.PI/2.3+tiltY*0.18;
+
+  title.style.transform=
+    `translate(-50%,-50%) translate(${tiltX*18}px,${tiltY*12}px)`;
+
+  renderer.render(scene,camera);
+}
+animate();
+
+/* RESIZE */
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+
+/* TYPING EFFECT */
+const text="🪐 Hi Mohammad Azky Kameel";
+const textEl=document.getElementById("text");
+let i=0;
+(function type(){
+  if(i<text.length){
+    textEl.innerHTML+=text[i++];
+    setTimeout(type,90);
   }
-}
-
-function handleMotion(e){
-  const x = e.gamma || 0; // kiri kanan
-  const y = e.beta || 0;  // atas bawah
-  nameText.style.transform =
-    `translate(${x*1.2}px, ${y*0.6}px)`;
-}
-
-document.body.addEventListener("click", enableMotion, { once:true });
+})();
 </script>
 
 </body>
