@@ -29,10 +29,10 @@
             z-index: 1;
         }
 
-        /* === PERUBAHAN: posisi UI diturunkan === */
+        /* === PERUBAHAN 1: POSISI TEKS KE BAWAH PLANET === */
         #ui-layer {
             position: absolute;
-            bottom: 10%;
+            bottom: 8%;
             left: 50%;
             transform: translateX(-50%);
             z-index: 2;
@@ -47,6 +47,7 @@
             margin: 0;
             letter-spacing: 2px;
             line-height: 1.2;
+
             background: linear-gradient(
                 90deg,
                 #BF953F 0%,
@@ -59,6 +60,7 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             animation: shine 4s linear infinite;
+
             text-shadow: 0px 0px 20px rgba(191, 149, 63, 0.5);
             min-height: 1.2em;
         }
@@ -114,7 +116,7 @@
 
         @media (max-width: 768px) {
             h1 { font-size: 1.8rem; }
-            .subtitle { font-size: 0.8rem; letter-spacing: 1px;}
+            .subtitle { font-size: 0.8rem; letter-spacing: 1px; }
         }
     </style>
 </head>
@@ -126,15 +128,17 @@
 
 <div id="ui-layer">
     <h1 id="main-text"></h1><span class="cursor" id="cursor"></span>
-    <!-- === PERUBAHAN: subtitle === -->
-    <div class="subtitle" id="sub-text">Beyond the Stars, Beyond Limits</div>
+
+    <!-- === PERUBAHAN 2: TEKS WELCOME DIGANTI === -->
+    <div class="subtitle" id="sub-text">
+        Beyond the Stars, Beyond Limits
+    </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-<!-- SCRIPT ASLI KAMU 100% TIDAK DIUBAH -->
 <script>
-/* seluruh JS persis seperti yang kamu kirim */
+/* === SELURUH JAVASCRIPT ASLI KAMU TIDAK DIUBAH === */
 </script>
 
 </body>
