@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Saturnus - Mohammad Azky Kameel</title>
-    <!-- Import Font Mewah (Serif Modern) -->
+    <!-- Import Font Mewah (Playfair Display) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
@@ -17,6 +17,7 @@
             overflow: hidden;
             font-family: 'Playfair Display', serif;
             color: white;
+            user-select: none; /* Mencegah blok teks tidak sengaja */
         }
 
         #canvas-container {
@@ -38,10 +39,9 @@
             text-align: center;
             pointer-events: none; /* Agar mouse tembus ke canvas */
             width: 90%;
-            mix-blend-mode: screen; /* Menyatu dengan background */
         }
 
-        /* Typography Style */
+        /* Typography Style - Gold Gradient */
         h1 {
             font-size: 3.5rem;
             font-weight: 700;
@@ -49,47 +49,49 @@
             letter-spacing: 2px;
             line-height: 1.2;
             
-            /* Gradient Text Effect seperti referensi tapi lebih elegan */
+            /* Efek Emas Mewah */
             background: linear-gradient(
                 90deg, 
-                #ffffff 0%, 
-                #ffd700 25%, 
-                #ff8c00 50%, 
-                #00bfff 75%, 
-                #ffffff 100%
+                #BF953F 0%, 
+                #FCF6BA 25%, 
+                #B38728 50%, 
+                #FBF5B7 75%, 
+                #AA771C 100%
             );
             background-size: 200% auto;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            animation: shine 5s linear infinite;
+            animation: shine 4s linear infinite;
             
-            text-shadow: 0px 0px 30px rgba(255, 215, 0, 0.3);
-            opacity: 0; /* Mulai invisible untuk typing effect */
+            text-shadow: 0px 0px 20px rgba(191, 149, 63, 0.5);
+            opacity: 1; 
+            min-height: 1.2em; /* Mencegah layout lompat saat mengetik */
         }
 
         .subtitle {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 400;
-            color: rgba(255, 255, 255, 0.7);
-            margin-top: 15px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 20px;
             font-style: italic;
-            letter-spacing: 1px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
             opacity: 0;
-            transition: opacity 1s ease;
+            transition: opacity 2s ease;
         }
 
         /* Cursor blinking */
         .cursor {
             display: inline-block;
             width: 3px;
-            height: 1em;
-            background-color: #fff;
+            height: 0.8em;
+            background-color: #FCF6BA;
             margin-left: 5px;
             animation: blink 1s infinite;
-            vertical-align: text-bottom;
+            vertical-align: bottom;
         }
 
-        /* Loading Screen */
+        /* Loading Screen Fixed */
         #loader {
             position: absolute;
             top: 0;
@@ -100,13 +102,13 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 10;
-            transition: opacity 1s ease-out;
+            z-index: 999;
+            transition: opacity 0.8s ease-out;
         }
         .spinner {
             width: 40px;
             height: 40px;
-            border: 4px solid rgba(255,255,255,0.1);
+            border: 3px solid rgba(255,255,255,0.1);
             border-left-color: #d4af37;
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -118,8 +120,8 @@
 
         /* Responsiveness */
         @media (max-width: 768px) {
-            h1 { font-size: 2rem; }
-            .subtitle { font-size: 0.9rem; }
+            h1 { font-size: 1.8rem; }
+            .subtitle { font-size: 0.8rem; letter-spacing: 1px;}
         }
     </style>
 </head>
@@ -134,171 +136,248 @@
     <!-- Text UI -->
     <div id="ui-layer">
         <h1 id="main-text"></h1><span class="cursor" id="cursor"></span>
-        <div class="subtitle" id="sub-text">Welcome to the Orbit</div>
+        <div class="subtitle" id="sub-text">Welcome to My Universe</div>
     </div>
 
     <!-- Three.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
+        // --- SAFEGUARD LOADER (Anti-Stuck) ---
+        // Jika loading macet lebih dari 2.5 detik, paksa masuk
+        setTimeout(() => {
+            const loader = document.getElementById('loader');
+            if(loader && loader.style.display !== 'none') {
+                loader.style.opacity = 0;
+                setTimeout(() => loader.style.display = 'none', 800);
+                if(document.getElementById('main-text').innerHTML === "") {
+                    startExperience();
+                }
+            }
+        }, 2500);
+
         // --- KONFIGURASI ---
         const config = {
             text: "Hi, Mohammad Azky Kameel",
-            typingSpeed: 100, // ms per huruf
+            typingSpeed: 100, 
             starsCount: 3000,
             bgHex: 0x050505
         };
 
-        // --- SETUP SCENE ---
-        const container = document.getElementById('canvas-container');
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(config.bgHex, 0.00003); // Kabut tipis untuk kedalaman
+        let scene, camera, renderer, planet, ring, starField, atmosphere;
+        let mouseX = 0, mouseY = 0;
+        let isTyping = false;
 
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 2, 25); // Posisi awal kamera
+        function init() {
+            // --- SETUP SCENE ---
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(config.bgHex, 0.00003); 
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.shadowMap.enabled = true; // Aktifkan bayangan
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        container.appendChild(renderer.domElement);
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 25); 
 
-        // --- GENERATE TEXTURES (Agar tidak perlu gambar eksternal) ---
-        function createPlanetTexture() {
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Optimasi performa
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            createObjects();
+            createLights();
+            setupEvents();
+            animate();
+            
+            // Hilangkan loader secara resmi jika init berhasil
+            const loader = document.getElementById('loader');
+            loader.style.opacity = 0;
+            setTimeout(() => {
+                loader.style.display = 'none';
+                startExperience();
+            }, 800);
+        }
+
+        // Generator Tekstur Prosedural (Tanpa Gambar Luar)
+        function createTextureNoise(width, height, color1, color2) {
             const canvas = document.createElement('canvas');
-            canvas.width = 1024;
-            canvas.height = 1024;
+            canvas.width = width;
+            canvas.height = height;
             const ctx = canvas.getContext('2d');
             
-            // Background dasar
-            const gradient = ctx.createLinearGradient(0, 0, 0, 1024);
-            gradient.addColorStop(0, '#e8cfa4'); // Krem terang
-            gradient.addColorStop(0.2, '#cfa574'); 
-            gradient.addColorStop(0.5, '#b08d5b'); // Coklat emas
-            gradient.addColorStop(0.8, '#a37c48'); 
-            gradient.addColorStop(1, '#8f6844');
+            // Gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, color1);
+            gradient.addColorStop(0.5, color2);
+            gradient.addColorStop(1, color1);
             ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, 1024, 1024);
+            ctx.fillRect(0, 0, width, height);
 
-            // Tambahkan garis-garis gas (Noise)
-            for (let i = 0; i < 200; i++) {
-                ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.1})`;
-                ctx.fillRect(0, Math.random() * 1024, 1024, Math.random() * 20);
-                
-                ctx.fillStyle = `rgba(0, 0, 0, ${Math.random() * 0.05})`;
-                ctx.fillRect(0, Math.random() * 1024, 1024, Math.random() * 10);
+            // Noise pattern
+            for (let i = 0; i < 400; i++) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.05})`;
+                ctx.fillRect(0, Math.random() * height, width, Math.random() * (height/20));
             }
             return new THREE.CanvasTexture(canvas);
         }
 
-        function createRingTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 1024;
-            canvas.height = 64; // Tekstur cincin memanjang
-            const ctx = canvas.getContext('2d');
+        function createObjects() {
+            // 1. PLANET SATURNUS
+            const planetGeo = new THREE.SphereGeometry(4, 64, 64);
+            const planetMat = new THREE.MeshStandardMaterial({
+                map: createTextureNoise(1024, 1024, '#cfa574', '#8f6844'),
+                roughness: 0.7,
+                metalness: 0.1
+            });
+            planet = new THREE.Mesh(planetGeo, planetMat);
+            planet.castShadow = true;
+            planet.receiveShadow = true;
+            scene.add(planet);
+
+            // 2. CINCIN
+            const ringGeo = new THREE.RingGeometry(5.2, 8.5, 128);
+            const ringPos = ringGeo.attributes.position;
+            const ringUv = ringGeo.attributes.uv;
             
-            // Buat pola cincin
-            for (let i = 0; i < 100; i++) {
-                const x = Math.random() * 1024;
-                const w = Math.random() * 10;
-                const alpha = Math.random();
-                ctx.fillStyle = `rgba(220, 200, 180, ${alpha})`;
-                ctx.fillRect(x, 0, w, 64);
+            // UV Mapping Radial agar tekstur melingkar
+            for (let i = 0; i < ringPos.count; i++) {
+                const x = ringPos.getX(i);
+                const y = ringPos.getY(i);
+                const r = Math.sqrt(x * x + y * y);
+                const v = (r - 5.2) / (8.5 - 5.2);
+                ringUv.setXY(i, v, 0); 
             }
             
-            // Ubah koordinat UV agar melingkar nanti di shader/geometry
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.wrapS = THREE.RepeatWrapping;
-            texture.wrapT = THREE.RepeatWrapping;
-            texture.rotation = Math.PI / 2; // Putar agar sesuai geometry cincin
-            return texture;
+            const ringMat = new THREE.MeshStandardMaterial({
+                map: createTextureNoise(64, 512, '#e0d0c0', '#a09080'),
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.9,
+                roughness: 0.5
+            });
+            
+            ringMat.map.rotation = Math.PI / 2;
+            ringMat.map.center.set(0.5, 0.5);
+
+            ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 1.7; 
+            ring.castShadow = true; 
+            ring.receiveShadow = true;
+            scene.add(ring);
+
+            // 3. ATMOSFER GLOW
+            const glowGeo = new THREE.SphereGeometry(4.2, 32, 32);
+            const glowMat = new THREE.MeshBasicMaterial({
+                color: 0xffaa00,
+                side: THREE.BackSide,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                opacity: 0.15
+            });
+            atmosphere = new THREE.Mesh(glowGeo, glowMat);
+            scene.add(atmosphere);
+
+            // 4. BINTANG
+            const starsGeo = new THREE.BufferGeometry();
+            const starsPos = [];
+            for (let i = 0; i < config.starsCount; i++) {
+                starsPos.push((Math.random() - 0.5) * 600);
+                starsPos.push((Math.random() - 0.5) * 600);
+                starsPos.push((Math.random() - 0.5) * 600);
+            }
+            starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starsPos, 3));
+            const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.4, transparent: true, opacity: 0.8 });
+            starField = new THREE.Points(starsGeo, starsMat);
+            scene.add(starField);
         }
 
-        // --- OBJEK SATURNUS ---
-        // 1. Bola Planet
-        const planetGeometry = new THREE.SphereGeometry(4, 64, 64);
-        const planetMaterial = new THREE.MeshStandardMaterial({
-            map: createPlanetTexture(),
-            roughness: 0.8,
-            metalness: 0.2
-        });
-        const planet = new THREE.Mesh(planetGeometry, planetMaterial);
-        planet.castShadow = true;
-        planet.receiveShadow = true;
-        scene.add(planet);
+        function createLights() {
+            // Matahari
+            const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            sunLight.position.set(30, 10, 20);
+            sunLight.castShadow = true;
+            scene.add(sunLight);
 
-        // 2. Cincin
-        const ringGeometry = new THREE.RingGeometry(5.5, 9, 128);
-        const ringPos = ringGeometry.attributes.position;
-        const ringUv = ringGeometry.attributes.uv;
-        
-        // Memperbaiki UV Mapping untuk Ring agar tekstur melingkar sempurna
-        for (let i = 0; i < ringPos.count; i++) {
-            const x = ringPos.getX(i);
-            const y = ringPos.getY(i);
-            const r = Math.sqrt(x * x + y * y);
-            // Map radius to V coordinate
-            const v = (r - 5.5) / (9 - 5.5);
-            ringUv.setXY(i, v, 0); 
+            // Ambient
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
+            scene.add(ambientLight);
+
+            // Rim Light (Efek Cinematic dari belakang)
+            const rimLight = new THREE.SpotLight(0xffd700, 2);
+            rimLight.position.set(-20, 0, -10);
+            rimLight.lookAt(0,0,0);
+            scene.add(rimLight);
         }
-        
-        const ringMaterial = new THREE.MeshStandardMaterial({
-            map: createPlanetTexture(), // Reuse tekstur tapi dengan UV beda
-            color: 0xffeedd,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.9,
-            roughness: 0.6
-        });
-        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-        ring.rotation.x = Math.PI / 1.8; // Miringkan cincin
-        ring.castShadow = true; 
-        ring.receiveShadow = true;
-        scene.add(ring);
 
-        // 3. Atmosfer/Glow (Teknik sederhana dengan Backside Mesh)
-        const glowGeometry = new THREE.SphereGeometry(4.2, 32, 32);
-        const glowMaterial = new THREE.MeshBasicMaterial({
-            color: 0x445588,
-            side: THREE.BackSide,
-            blending: THREE.AdditiveBlending,
-            transparent: true,
-            opacity: 0.3
-        });
-        const atmosphere = new THREE.Mesh(glowGeometry, glowMaterial);
-        scene.add(atmosphere);
+        function setupEvents() {
+            // Mouse Movement (Desktop)
+            document.addEventListener('mousemove', (e) => {
+                mouseX = (e.clientX - window.innerWidth / 2) * 0.001;
+                mouseY = (e.clientY - window.innerHeight / 2) * 0.001;
+            });
+            
+            // Touch Movement (Mobile)
+            document.addEventListener('touchmove', (e) => {
+                if(e.touches.length > 0) {
+                    mouseX = (e.touches[0].clientX - window.innerWidth / 2) * 0.002;
+                    mouseY = (e.touches[0].clientY - window.innerHeight / 2) * 0.002;
+                }
+            });
 
-        // --- BINTANG (PARTIKEL) ---
-        const starsGeometry = new THREE.BufferGeometry();
-        const starsPos = [];
-        for (let i = 0; i < config.starsCount; i++) {
-            const x = (Math.random() - 0.5) * 600;
-            const y = (Math.random() - 0.5) * 600;
-            const z = (Math.random() - 0.5) * 600;
-            starsPos.push(x, y, z);
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
         }
-        starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsPos, 3));
-        const starsMaterial = new THREE.PointsMaterial({
-            color: 0xffffff,
-            size: 0.5,
-            transparent: true,
-            opacity: 0.8
-        });
-        const starField = new THREE.Points(starsGeometry, starsMaterial);
-        scene.add(starField);
 
-        // --- PENCAHAYAAN (Lighting) ---
-        // 1. Matahari Utama (Kuat, menciptakan bayangan)
-        const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        sunLight.position.set(30, 10, 20);
-        sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 2048; // Bayangan tajam
-        sunLight.shadow.mapSize.height = 2048;
-        scene.add(sunLight);
+        function animate() {
+            requestAnimationFrame(animate);
 
-        // 2. Ambient Light (Cahaya dasar agar sisi gelap tidak hitam pekat)
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
-        scene.add(ambientLight);
+            // Rotasi objek
+            planet.rotation.y += 0.002;
+            atmosphere.rotation.y += 0.002;
+            ring.rotation.z -= 0.0005;
+            starField.rotation.y -= 0.0002;
 
-        // 3. Rim Light (Cahaya biru dari belakang untuk efek sinematik)
+            // Efek Parallax (Mengikuti Mouse)
+            const targetX = mouseX * 10;
+            const targetY = mouseY * 5;
+            camera.position.x += (targetX - camera.position.x) * 0.05;
+            camera.position.y += (-targetY - camera.position.y) * 0.05;
+            camera.lookAt(scene.position);
+
+            renderer.render(scene, camera);
+        }
+
+        function startExperience() {
+            if(isTyping) return;
+            isTyping = true;
+            
+            const h1 = document.getElementById('main-text');
+            const cursor = document.getElementById('cursor');
+            const sub = document.getElementById('sub-text');
+            
+            let i = 0;
+            h1.innerHTML = ""; // Reset
+            
+            function type() {
+                if (i < config.text.length) {
+                    h1.innerHTML += config.text.charAt(i);
+                    i++;
+                    setTimeout(type, config.typingSpeed);
+                } else {
+                    // Selesai ngetik
+                    cursor.style.display = 'none';
+                    sub.style.opacity = 1;
+                }
+            }
+            type();
+        }
+
+        // Jalankan init
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>
