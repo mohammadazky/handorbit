@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>HANDORBIT – Saturnus</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+
+<style>
+html,body{
+  margin:0;
+  padding:0;
+  background:black;
+  overflow:hidden;
+  touch-action:none;
+}
+canvas{display:block}
+
+#text{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-family:'Dancing Script',cursive;
+  font-size:3rem;
+  color:white;
+  white-space:nowrap;
+  pointer-events:none;
+  text-shadow:
+    0 0 20px rgba(255,255,255,.6),
+    0 0 40px rgba(0,150,255,.35);
+}
+
+#info{
+  position:absolute;
+  bottom:10px;
+  width:100%;
+  text-align:center;
+  font-size:12px;
+  color:rgba(255,255,255,.5);
+  font-family:sans-serif;
+}
+</style>
+</head>
+
+<body>
+<div id="text">🪐 Hi Mohammad Azky Kameel</div>
+<div id="info">Tap / Geser / Gerakkan tangan</div>
+<video id="video" style="display:none"></video>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.145.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+<script>
+/* === THREE JS === */
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
+camera.position.z = 7;
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff,0.4));
+const sun = new THREE.DirectionalLight(0xffffff,2.2);
+sun.position.set(8,10,6);
+scene.add(sun);
+
+/* === SATURNUS === */
+const geometry = new THREE.SphereGeometry(2,64,64);
+const material = new THREE.MeshStandardMaterial({
+  color:0xcaa472,
+  roughness:0.4,
+  metalness:0.2
+});
+const saturn = new THREE.Mesh(geometry,material);
+scene.add(saturn);
+
+/* === RING === */
+const ringGeo = new THREE.RingGeometry(2.5,3.5,64);
+const ringMat = new THREE.MeshBasicMaterial({
+  color:0xd6c49c,
+  side:THREE.DoubleSide,
+  transparent:true,
+  opacity:0.8
+});
+const ring = new THREE.Mesh(ringGeo, ringMat);
+ring.rotation.x = Math.PI/2;
+scene.add(ring);
+
+/* === ANIMASI === */
+function animate(){
+  requestAnimationFrame(animate);
+  saturn.rotation.y += 0.003;
+  ring.rotation.z += 0.002;
+  renderer.render(scene,camera);
+}
+animate();
+
+/* === RESPONSIVE === */
+addEventListener("resize",()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
